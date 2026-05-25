@@ -3,27 +3,18 @@ from streamlit_drawable_canvas import st_canvas
 import numpy as np
 from PIL import Image
 import joblib
+import pandas as pd
 
-# ----------------------------
-# Load trained Random Forest model
-# ----------------------------
+# Load model
 model = joblib.load("digit_rf_model.pkl")
 
-# ----------------------------
 # Page config
-# ----------------------------
-st.set_page_config(
-    page_title="Digit Recognizer",
-    page_icon="✍️",
-    layout="centered"
-)
+st.set_page_config(page_title="Digit Recognizer", page_icon="✍️")
 
 st.title("✍️ Handwritten Digit Recognizer")
-st.write("Draw a digit (0-9) below and click Predict")
+st.write("Draw a digit (0–9) and click Predict")
 
-# ----------------------------
 # Canvas
-# ----------------------------
 canvas_result = st_canvas(
     fill_color="white",
     stroke_width=15,
@@ -35,40 +26,35 @@ canvas_result = st_canvas(
     key="canvas"
 )
 
-# ----------------------------
-# Prediction
-# ----------------------------
 if st.button("Predict"):
 
     if canvas_result.image_data is not None:
 
         # Convert image
         img = Image.fromarray(
-            (canvas_result.image_data[:, :, 0]).astype("uint8")
+            canvas_result.image_data[:, :, 0].astype("uint8")
         )
 
         # Resize to 28x28
         img = img.resize((28, 28))
 
-        # Convert to grayscale
+        # Grayscale
         img = img.convert("L")
 
         # Invert colors
         img_array = 255 - np.array(img)
 
-        # Normalize
-        img_array = img_array / 255.0
+        # Normalize + flatten
+        img_flat = img_array.reshape(1, -1) / 255.0
 
-        # Flatten
-        img_flat = img_array.reshape(1, -1)
+        # Convert to DataFrame
+        img_df = pd.DataFrame(img_flat)
 
         # Predict
-        prediction = model.predict(img_flat)[0]
-        probabilities = model.predict_proba(img_flat)[0]
+        prediction = model.predict(img_df)[0]
+        probabilities = model.predict_proba(img_df)[0]
 
-        st.success(f"Predicted Digit: **{prediction}**")
-
-        st.subheader("Confidence Scores")
+        st.success(f"Predicted Digit: {prediction}")
         st.bar_chart(probabilities)
 
     else:
